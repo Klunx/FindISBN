@@ -32,9 +32,20 @@ class MasterViewController: UITableViewController, UISplitViewControllerDelegate
     func insertNewObject(sender: AnyObject) {
         
         let isbnStr = isbnTxt.text!
-        agregarLibro(isbnStr)
-        self.tableView.reloadData()
+        if isbnStr == "" {
+            alertaError("Agrega un isbn por favor.")
+        } else {
+            agregarLibro(isbnStr)
+            self.tableView.reloadData()
+        }
         isbnTxt.text = ""
+    }
+    
+    func alertaError(mensaje : String) {
+        let alerta = UIAlertController(title: "Error", message: mensaje, preferredStyle: UIAlertControllerStyle.Alert)
+        alerta.addAction(UIAlertAction(title: "OK", style: UIAlertActionStyle.Cancel, handler: nil))
+        presentViewController(alerta, animated: true, completion: nil)
+        
     }
     
     func agregarLibro(isbn: String) {
@@ -45,35 +56,40 @@ class MasterViewController: UITableViewController, UISplitViewControllerDelegate
         let urls = "https://openlibrary.org/api/books?jscmd=data&format=json&bibkeys=ISBN:" + isbn
         let mainObject : String = "ISBN:" + isbn
         let url = NSURL(string: urls)
-        
-        
-        
         let JSONData : NSData? = NSData(contentsOfURL: url!)
-        do {
-            let json = try NSJSONSerialization.JSONObjectWithData(JSONData!, options:NSJSONReadingOptions.MutableLeaves)
-            let diccionario = json[mainObject] as! NSDictionary
-            let titulo = diccionario["title"] as! NSString as String
-            //let publishers = diccionario["publishers"] as! NSArray
-            let autores = diccionario["authors"] as! NSArray
-            for autor in autores {
-                let tmpAutor : String = autor["name"] as! NSString as String
-                tmpAutores.append(tmpAutor)
-            }
-            if diccionario["cover"] != nil {
-                let img = diccionario["cover"] as! NSDictionary
-                    tmpPortada = img["medium"] as! NSString as String
-            }
-            
-            libros.append(Libro(titulo: titulo, isbn: isbn, autores: tmpAutores, portada: tmpPortada))
-
-            
+        if (JSONData == nil) {
+            alertaError("Recurso no accesible.")
         }
-        catch let JSONError as NSError {
-            let errorString : String = "\(JSONError)"
-            let alerta = UIAlertController(title: "Error", message: errorString, preferredStyle: UIAlertControllerStyle.Alert)
-            alerta.addAction(UIAlertAction(title: "OK", style: UIAlertActionStyle.Cancel, handler: nil))
-            presentViewController(alerta, animated: true, completion: nil)
-            
+        else {
+            do {
+                let json = try NSJSONSerialization.JSONObjectWithData(JSONData!, options:NSJSONReadingOptions.MutableLeaves)
+                //let diccionario = json[mainObject] as! NSDictionary
+                guard let diccionario :NSDictionary = json[mainObject] as? NSDictionary else {
+                    alertaError("Recurso no accesible.")
+                    // put in function
+                    return
+                }
+                let titulo = diccionario["title"] as! NSString as String
+                //let publishers = diccionario["publishers"] as! NSArray
+                let autores = diccionario["authors"] as! NSArray
+                for autor in autores {
+                    let tmpAutor : String = autor["name"] as! NSString as String
+                    tmpAutores.append(tmpAutor)
+                }
+                if diccionario["cover"] != nil {
+                    let img = diccionario["cover"] as! NSDictionary
+                    tmpPortada = img["medium"] as! NSString as String
+                }
+                
+                libros.append(Libro(titulo: titulo, isbn: isbn, autores: tmpAutores, portada: tmpPortada))
+                
+                
+            }
+            catch let JSONError as NSError {
+                let errorString : String = "\(JSONError)"
+                alertaError(errorString)
+                
+            }
         }
     }
 
